@@ -3,6 +3,14 @@
   "version": "0.2.0",
   "description": "截图批注、修改任务与 Agent 交接工作台",
   "icon": "./icon.svg",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/007350/dsh-screenshot-board.git"
+  },
+  "homepage": "https://github.com/007350/dsh-screenshot-board#readme",
+  "bugs": {
+    "url": "https://github.com/007350/dsh-screenshot-board/issues"
+  },
   "type": "module",
   "main": "./lib/index.js",
   "exports": {
