@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { BoardStore } from '../src/host/storage.js';
+import { createHandler } from '../src/host/router.js';
+test('real HTTP CRUD, token protection, exports and portable import roundtrip', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ssb-http-'));
+  const store = new BoardStore(dir), server = createServer(createHandler({ store }));
+  await new Promise(r => server.listen(0, '127.0.0.1', r));
+  const base = 'http://127.0.0.1:' + server.address().port + '/dsh-screenshot-board/api/';
+  try {
+    const token = (await (await fetch(base + 'session')).json()).token;
+    const req = (path, method, body, withToken = true) => fetch(base + path, { method, headers: { 'content-type': 'application/json', ...(withToken ? { 'x-screenshot-board-token': token } : {}) }, body: JSON.stringify(body) });
+    assert.equal((await req('boards', 'POST', {}, false)).status, 403);
+    assert.equal((await req('boards', 'POST', null)).status, 400);
+    assert.equal((await req('boards', 'POST', [])).status, 400);
+    assert.equal((await fetch(base + 'boards', { method: 'POST', headers: { 'content-type': 'application/json', 'x-screenshot-board-token': 'é'.repeat(64) }, body: '{}' })).status, 403);
+    const created = await (await req('boards', 'POST', { title: 'Roundtrip' })).json();
+    const asset = await (await req('assets', 'POST', { name: 'tiny.png', dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=' })).json();
+    created.screenshots.push({ id: 's1', title: '页面', original: asset, after: null, tasks: [] });
+    const saved = await (await req('boards/' + created.id, 'PUT', created)).json();
+    assert.equal(saved.revision, 1);
+    assert.equal((await req('boards/' + created.id, 'PUT', created)).status, 409);
+    const zip = await req('boards/' + created.id + '/export', 'POST', { revision: 1, rendered: {} });
+    assert.equal(zip.status, 200);
+    const bytes = Buffer.from(await zip.arrayBuffer());
+    assert.ok(bytes.includes(Buffer.from('images/01-original.png')));
+    assert.ok(bytes.includes(Buffer.from('tasks.md')));
+    assert.ok(bytes.includes(Buffer.from('handoff.json')));
+    assert.ok(bytes.includes(Buffer.from('本次执行任务')));
+    assert.equal((await req('boards/' + created.id + '/export', 'POST', { revision: 0, rendered: {} })).status,409);
+    assert.equal((await req('boards/' + created.id + '/export', 'POST', { revision: 1, rendered: {}, selection:{executionTaskIds:['unknown']} })).status,400);
+    const portable = await (await fetch(base + 'boards/' + created.id + '/portable')).json();
+    const imported = await (await req('import', 'POST', portable)).json();
+    assert.notEqual(imported.id, saved.id);
+    assert.equal(imported.screenshots[0].original.id, asset.id);
+    portable.assets[asset.id] = 'data:image/png;base64,ZXZpbA==';
+    assert.equal((await req('import', 'POST', portable)).status, 400);
+    assert.equal((await req('boards/' + created.id, 'DELETE', { revision: 0 })).status, 409);
+    assert.equal((await req('boards/' + created.id, 'DELETE', { revision: 1 })).status, 200);
+    assert.equal((await fetch(base + 'boards/' + created.id)).status, 404);
+  } finally { await new Promise(r => server.close(r)); await rm(dir, { recursive: true, force: true }); }
+});

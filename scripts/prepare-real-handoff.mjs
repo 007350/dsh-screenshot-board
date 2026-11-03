@@ -1,0 +1,24 @@
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { createRequire } from 'node:module';
+import { BoardStore } from '../src/host/storage.js';
+import { createTask, uid } from '../src/core/board.js';
+import { exportBoard } from '../src/host/export.js';
+const root=resolve(import.meta.dirname,'..'),out=resolve(root,'artifacts/real-agent-handoff');
+await mkdir(out,{recursive:true});
+const store=new BoardStore(resolve(root,'artifacts/real-agent-handoff-data'));
+let board=await store.create({title:'截图任务板自身：收起文案与窄窗口背景入口',projectPath:root});
+board.description='这是正在改进的真实 DSH 截图任务板插件。本轮仅处理下列两个界面缺口。截图取自插件独立预览；截图中央的 Northstar 演示图片只是用户上传内容，目标是包围它的任务板工具栏和背景入口。源码由既有 D:/dsh-screenshot-board 复制而来，本轮在此工作目录继续开发，最终另行同步；不要写原目录或 DSH profile。';
+board.context={startup:'已有 esbuild：node scripts/build.mjs --esbuild-root D:/NodeGlobal/node_modules/vercel。独立预览已运行在 http://127.0.0.1:4388/；必要时 node scripts/preview.mjs --port 4388 --data-dir artifacts/next-stage-preview-data。',url:'http://127.0.0.1:4388/',entry:'打开预览后选择已有板，或点击试用示例；本轮修改工作台自己的页头和项目背景按钮。',conditions:'无需登录、无需安装。已有 Playwright 位于 D:/explorepro；Chromium 为 C:/Users/zouxi/AppData/Local/ms-playwright/chromium-1248/chrome-win64/chrome.exe。预览含隔离测试数据，可创建演示板。',files:'src/client/app.js：工具栏及项目背景入口；src/client/preview.js：独立预览挂载/恢复；src/client/style.css：<=900px 规则；scripts/smoke-next-stage.mjs：现有浏览器流程。以上为定位线索，仍需核对。',scope:'只允许修改本项目 src/client/app.js、src/client/preview.js、src/client/style.css，并新增一个独立浏览器验证脚本或调整 scripts/smoke-next-stage.mjs 的预览按钮选择器；不改 core/host、数据模型、依赖、其他文档或 DSH profile，不安装。可构建 lib，并将验证结果/截图写 artifacts/。已确认的其他产品行为保持。',unknowns:'DSH 实机表现未验证；本轮仅验证独立预览及布局。若缺少要求或授权，请记录问题。'};
+const screenshot=await readFile(resolve(root,'artifacts/next-stage-editor.png'));
+const asset=await store.addAsset({dataUrl:'data:image/png;base64,'+screenshot.toString('base64'),name:'真实截图任务板-工具栏.png'});
+const first=Object.assign(createTask({x:.895,y:.005,w:.1,h:.06},1),{title:'独立预览使用准确的收起文案',note:'独立预览没有 DSH 聊天，但工具栏仍显示「收起到聊天」，收起后也只剩恢复按钮。',requirement:'独立预览的收起入口改为「收起预览」，收起后显示一句简明提示，说明任务板已收起、当前编辑保留，以及可用右下角恢复。DSH Client 继续使用「收起到聊天」并维持保留 DOM 的行为。不要引入新的 DSH API。',acceptance:'在独立预览点击「收起预览」后能看到明确提示和「恢复截图任务板」按钮；恢复后同一未提交讨论仍在。实际 Client 的默认按钮仍为「收起到聊天」。',clarity:'confirmed'});
+const second=Object.assign(createTask({x:.82,y:.095,w:.175,h:.07},2),{title:'窄窗口仍可打开项目背景',note:'800px 宽窗口下，项目背景与设置入口都被 .ssb-meta-actions 的旧 media query 隐藏。',requirement:'在约 800px 宽窗口保留可识别的项目背景或设置入口，用户能打开同一背景编辑对话框。只做必要的紧凑布局，不重做工作台，也不新增必填项。',acceptance:'将预览窗口设为 800×800，能够点击可见的项目背景或任务板设置入口并编辑启动方式；保存后刷新仍在。1600px 布局及收起恢复流程继续通过。',clarity:'confirmed'});
+board.screenshots.push({id:uid(),title:'真实插件预览页（目标为外围工作台 UI）',original:asset,after:null,tasks:[first,second]});
+board=await store.save(board);
+const require=createRequire('D:/explorepro/package.json'),{chromium}=require('playwright');
+const browser=await chromium.launch({headless:true,executablePath:'C:/Users/zouxi/AppData/Local/ms-playwright/chromium-1248/chrome-win64/chrome.exe'});
+let rendered;
+try{const page=await browser.newPage();rendered=await page.evaluate(async({data,tasks})=>{const img=new Image();img.src=data;await img.decode();const canvas=document.createElement('canvas');canvas.width=img.width;canvas.height=img.height;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);tasks.forEach((task,index)=>{const r=task.rect,x=r.x*img.width,y=r.y*img.height;ctx.strokeStyle='#7956db';ctx.lineWidth=3;ctx.strokeRect(x,y,r.w*img.width,r.h*img.height);ctx.fillStyle='#7956db';ctx.fillRect(x,y,32,32);ctx.fillStyle='#fff';ctx.font='bold 22px sans-serif';ctx.fillText(index+1,x+9,y+24);});return canvas.toDataURL('image/png');},{data:'data:image/png;base64,'+screenshot.toString('base64'),tasks:board.screenshots[0].tasks});}finally{await browser.close();}
+await writeFile(resolve(out,'handoff.zip'),await exportBoard(store,board,{[board.screenshots[0].id]:rendered}));
+console.log('Real-project handoff created: '+resolve(out,'handoff.zip'));

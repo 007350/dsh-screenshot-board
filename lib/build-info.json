@@ -1,0 +1,5 @@
+{
+  "name": "dsh-screenshot-board",
+  "version": "0.2.0",
+  "bundler": "esbuild 0.27.0"
+}

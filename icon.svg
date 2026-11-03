@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Screenshot Board">
+  <rect width="64" height="64" rx="14" fill="#0f172a"/>
+  <rect x="13" y="13" width="33" height="29" rx="5" fill="none" stroke="#f1f5f9" stroke-width="2.5" stroke-dasharray="5 4" stroke-linecap="round"/>
+  <circle cx="47" cy="47" r="9" fill="#22d3ee"/>
+  <circle cx="47" cy="47" r="3.5" fill="#0f172a"/>
+</svg>

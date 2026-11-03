@@ -1,0 +1,6 @@
+node_modules/
+.preview-data/
+artifacts/
+dist/
+*.tmp
+.npm-cache/

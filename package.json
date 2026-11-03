@@ -1,0 +1,70 @@
+{
+  "name": "dsh-screenshot-board",
+  "version": "0.2.0",
+  "description": "截图批注、修改任务与 Agent 交接工作台",
+  "icon": "./icon.svg",
+  "type": "module",
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./icon": "./icon.svg",
+    "./locale/*.json": "./locale/*.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/build-info.json",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale/*.json",
+    "README.md",
+    "LICENSE",
+    "docs/API-EVIDENCE.md",
+    "docs/VALIDATION.md",
+    "docs/CHANGELOG.md",
+    "docs/REAL-AGENT-HANDOFF.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "preview": "node scripts/preview.mjs",
+    "check:package": "node scripts/check-package.mjs",
+    "pack": "npm pack --pack-destination dist",
+    "prepack": "node scripts/check-package.mjs"
+  },
+  "engines": {
+    "node": ">=22.19.0",
+    "dsh": ">=0.2.0-rc.1 <0.3.0"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "screenshot",
+    "annotation"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-host-webserver": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-home-paths": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-runtime": "^0.2.0-rc.1 || ^0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-locale": "^0.2.0-rc.1 || ^0.2.1-rc.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.27.0"
+  }
+}
